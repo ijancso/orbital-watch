@@ -1,0 +1,6 @@
+# ============================================================
+# Dockerfile.influxdb
+# Plain InfluxDB image — no modifications needed.
+# Referenced separately so render.yaml can point to it.
+# ============================================================
+FROM influxdb:2.7-alpine

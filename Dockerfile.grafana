@@ -1,0 +1,12 @@
+# ============================================================
+# Dockerfile.grafana
+# Grafana with auto-provisioned InfluxDB datasource
+# ============================================================
+FROM grafana/grafana-oss:latest
+
+# Copy provisioning config so the datasource is ready on first boot
+COPY grafana/provisioning /etc/grafana/provisioning
+
+USER root
+RUN chown -R grafana:root /etc/grafana/provisioning
+USER grafana

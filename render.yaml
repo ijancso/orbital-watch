@@ -1,0 +1,109 @@
+services:
+  # ─────────────────────────────────────────
+  # 1. FastAPI — public web service
+  # ─────────────────────────────────────────
+  - type: web
+    name: orbital-watch-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # $7/mo — always on, never sleeps
+    healthCheckPath: /docs
+    envVars:
+      - key: INFLUXDB_URL
+        value: http://orbital-watch-influxdb:8086
+      - key: INFLUXDB_ORG
+        sync: false        # set manually in Render dashboard
+      - key: INFLUXDB_BUCKET
+        sync: false
+      - key: INFLUXDB_TOKEN
+        sync: false
+      - key: SPACETRACK_USERNAME
+        sync: false
+      - key: SPACETRACK_PASSWORD
+        sync: false
+      - key: ISS_POLL_INTERVAL
+        value: "10"
+      - key: TLE_SYNC_INTERVAL_HOURS
+        value: "6"
+
+  # ─────────────────────────────────────────
+  # 2. Scheduler / ISS poller — background worker
+  # ─────────────────────────────────────────
+  - type: worker
+    name: orbital-watch-scheduler
+    runtime: docker
+    dockerfilePath: ./Dockerfile.scheduler
+    plan: starter
+    envVars:
+      - key: INFLUXDB_URL
+        value: http://orbital-watch-influxdb:8086
+      - key: INFLUXDB_ORG
+        sync: false
+      - key: INFLUXDB_BUCKET
+        sync: false
+      - key: INFLUXDB_TOKEN
+        sync: false
+      - key: SPACETRACK_USERNAME
+        sync: false
+      - key: SPACETRACK_PASSWORD
+        sync: false
+      - key: ISS_POLL_INTERVAL
+        value: "10"
+      - key: TLE_SYNC_INTERVAL_HOURS
+        value: "6"
+
+  # ─────────────────────────────────────────
+  # 3. InfluxDB — private service (not reachable from outside)
+  # ─────────────────────────────────────────
+  - type: pserv
+    name: orbital-watch-influxdb
+    runtime: docker
+    dockerfilePath: ./Dockerfile.influxdb
+    plan: starter
+    disk:
+      name: influxdb-data
+      mountPath: /var/lib/influxdb2
+      sizeGB: 1
+    envVars:
+      - key: DOCKER_INFLUXDB_INIT_MODE
+        value: setup
+      - key: DOCKER_INFLUXDB_INIT_USERNAME
+        value: admin
+      - key: DOCKER_INFLUXDB_INIT_PASSWORD
+        sync: false
+      - key: DOCKER_INFLUXDB_INIT_ORG
+        sync: false
+      - key: DOCKER_INFLUXDB_INIT_BUCKET
+        sync: false
+      - key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+        sync: false
+
+  # ─────────────────────────────────────────
+  # 4. Grafana — public web service (password protected)
+  # ─────────────────────────────────────────
+  - type: web
+    name: orbital-watch-grafana
+    runtime: docker
+    dockerfilePath: ./Dockerfile.grafana
+    plan: starter
+    disk:
+      name: grafana-data
+      mountPath: /var/lib/grafana
+      sizeGB: 1
+    envVars:
+      - key: GF_SECURITY_ADMIN_USER
+        sync: false
+      - key: GF_SECURITY_ADMIN_PASSWORD
+        sync: false
+      - key: GF_SERVER_ROOT_URL
+        sync: false        # e.g. https://orbital-watch-grafana.onrender.com
+      - key: GF_USERS_ALLOW_SIGN_UP
+        value: "false"
+      - key: INFLUXDB_URL
+        value: http://orbital-watch-influxdb:8086
+      - key: INFLUXDB_TOKEN
+        sync: false
+      - key: INFLUXDB_ORG
+        sync: false
+      - key: INFLUXDB_BUCKET
+        sync: false
